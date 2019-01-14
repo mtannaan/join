@@ -11,7 +11,7 @@ defmodule Join do
     - `:on_left` - join key for `t1`. Exclusive with `:on`.
     - `:on_right` - join key for `t2`. Exclusive with `:on`.
     - `:delete_right_key`: boolean.
-    - `validation`: one of `:one_to_one`, `:one_to_many`, and `:many_to_one`.
+    - `:validation`: one of `:one_to_one`, `:one_to_many`, and `:many_to_one`.
   """
   def inner(t1, t2, opts) do
     {on_left, on_right} =
