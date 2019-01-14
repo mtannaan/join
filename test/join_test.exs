@@ -152,4 +152,18 @@ defmodule JoinTest do
       Join.inner(@t3, @t2, on: :a, delete_right_key: true, validation: :one_to_many)
     end)
   end
+
+  test "raise when duplicate" do
+    assert_raise(
+      RuntimeError,
+      "duplicate columns: [:a]",
+      fn -> Join.inner(@t1, @t2, on: :a, raise_when_duplicate: true) |> IO.inspect end
+    )
+
+    assert_raise(
+      RuntimeError,
+      "duplicate columns: [:b, :c]",
+      fn -> Join.inner(@u1, @u1, on: :a, raise_when_duplicate: true, delete_right_key: true) end
+    )
+  end
 end

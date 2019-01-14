@@ -10,10 +10,12 @@ defmodule Join do
     - `:on` - join key
     - `:on_left` - join key for `t1`. Exclusive with `:on`.
     - `:on_right` - join key for `t2`. Exclusive with `:on`.
-    - `:delete_right_key`: boolean.
-    - `:validation`: one of `:one_to_one`, `:one_to_many`, and `:many_to_one`.
+    - `:delete_right_key` - Boolean.
+    - `:validation` - one of `:one_to_one`, `:one_to_many`, and `:many_to_one`.
+    - `:raise_when_duplicate` - Boolean. Defaults to false. When true, raises when resulting table has duplicate columns.
   """
   def inner(t1, t2, opts) do
+    # get key columns
     {on_left, on_right} =
       cond do
         Keyword.has_key?(opts, :on) ->
@@ -28,6 +30,7 @@ defmodule Join do
           {opts[:on_left], opts[:on_right]}
       end
 
+    # convert to list
     ensure_list = fn
       x when is_list(x) -> x
       x -> [x]
@@ -36,6 +39,7 @@ defmodule Join do
     on_left = ensure_list.(on_left)
     on_right = ensure_list.(on_right)
 
+    # key validations
     unless length(on_left) === length(on_right) do
       raise ArgumentError,
         message:
@@ -46,6 +50,7 @@ defmodule Join do
       raise ArgumentError, message: "join key is empty."
     end
 
+    # one-to-many/many-to-one validations
     raise_if_error = fn
       :ok ->
         nil
@@ -62,10 +67,25 @@ defmodule Join do
       raise_if_error.(assert_many_to_one(t2, t1, on_right, on_left))
     end
 
-    t1
-    |> Enum.flat_map(fn r1 ->
-      inner_single_row(r1, t2, on_left, on_right, opts[:delete_right_key])
-    end)
+    # return value
+    ret =
+      t1
+      |> Enum.flat_map(fn r1 ->
+        inner_single_row(r1, t2, on_left, on_right, opts[:delete_right_key])
+      end)
+
+    # check duplicate
+    if opts[:raise_when_duplicate] do
+      ret |> Enum.each(fn row -> 
+        cols = row |> Keyword.keys()
+        dup_cols = (cols -- Enum.uniq(cols)) |> Enum.uniq()
+        if length(dup_cols) > 0 do
+          raise "duplicate columns: #{inspect(dup_cols)}"
+        end
+      end)
+    end
+
+    ret
   end
 
   defp inner_single_row(r1, t2, on_left, on_right, delete_right_key) do
